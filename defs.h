@@ -118,6 +118,7 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+void            ps(void);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
@@ -185,6 +186,8 @@ void            switchuvm(struct proc*);
 void            switchkvm(void);
 int             copyout(pml4e_t*, addr_t, void*, uint64);
 void            clearpteu(pml4e_t *pgdir, char *uva);
+int mappages(pde_t *pgdir, void *va, addr_t size, addr_t pa, int perm);
+addr_t* walkpgdir(pde_t *pml4, const void *va, int alloc);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

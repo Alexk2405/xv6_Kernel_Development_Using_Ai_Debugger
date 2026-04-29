@@ -40,17 +40,41 @@ sys_getpid(void)
 {
   return proc->pid;
 }
+int
+sys_getppid(void)
+{
+    return proc->parent->pid;
+}
 
-addr_t
+int sys_getpid2(void)
+{
+    //struct proc *p = 0;
+    return proc->pid;
+}
+
+int
+sys_ps(void)
+{
+    ps();
+    return 0;
+}
+// Lazy allocation is intentional: only update proc->sz here.
+// Physical pages are allocated on demand in the page fault handler in trap.c.
+int
 sys_sbrk(void)
 {
-  addr_t addr;
-  addr_t n;
+  int addr;
+  int n;
 
-  argaddr(0, &n);
-  addr = proc->sz;
-  if(growproc(n) < 0)
+  if(argint(0, &n) < 0)
     return -1;
+  addr = proc->sz;
+  if(n < 0){
+    if(growproc(n) < 0)
+      return -1;
+  } else {
+    proc->sz += n;
+  }
   return addr;
 }
 

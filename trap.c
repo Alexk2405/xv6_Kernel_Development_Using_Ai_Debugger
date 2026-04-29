@@ -76,8 +76,37 @@ trap(struct trapframe *tf)
             cpunum(), tf->cs, tf->rip);
     lapiceoi();
     break;
+  case T_PGFLT:
+    if(proc == 0 || (tf->cs&3) == 0){
+        panic("pgflt in kernel");
+    }
+    uint64 addr = rcr2();
+    if(addr < PGSIZE || addr >= proc->sz || addr >= KERNBASE){
+        proc->killed = 1;
+        break;
+    }
+    addr = PGROUNDDOWN(addr);
 
-  //PAGEBREAK: 13
+    // check if already mapped
+    pte_t *pte = walkpgdir(proc->pgdir, (void*)addr, 0);
+    if(pte && (*pte & PTE_P)){
+        proc->killed = 1;
+        break;
+    }
+
+    char *mem = kalloc();
+    if(mem == 0){
+        proc->killed = 1;
+        break;
+    }
+    memset(mem, 0, PGSIZE);
+    if(mappages(proc->pgdir, (void*)addr, PGSIZE, V2P(mem), PTE_W|PTE_U) < 0){
+        kfree(mem);
+        proc->killed = 1;
+    }
+    break;
+
+//PAGEBREAK: 13
   default:
     if(proc == 0 || (tf->cs&3) == 0){
       // In kernel, it must be our mistake.

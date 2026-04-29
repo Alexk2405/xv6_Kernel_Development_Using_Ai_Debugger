@@ -157,7 +157,7 @@ switchuvm(struct proc *p)
 // In 64-bit mode, the page table has four levels: PML4, PDPT, PD and PT
 // For each level, we dereference the correct entry, or allocate and
 // initialize entry if the PTE_P bit is not set
-static pte_t *
+pte_t *
 walkpgdir(pde_t *pml4, const void *va, int alloc)
 {
   pml4e_t *pml4e;
@@ -288,6 +288,9 @@ allocuvm(pde_t *pgdir, uint64 oldsz, uint64 newsz)
 
   a = PGROUNDUP(oldsz);
   for(; a < newsz; a += PGSIZE){
+    pte_t *pte = walkpgdir(pgdir, (char*)a, 0);
+    if(pte && (*pte & PTE_P))
+        continue;
     mem = kalloc();
     if(mem == 0){
       //cprintf("allocuvm out of memory\n");
@@ -410,9 +413,9 @@ copyuvm(pml4e_t *pgdir, uint sz)
     return 0;
   for(i = PGSIZE; i < sz; i += PGSIZE){
     if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
-      panic("copyuvm: pte should exist");
+    continue;
     if(!(*pte & PTE_P))
-      panic("copyuvm: page not present");
+    continue;
     pa = PTE_ADDR(*pte);
     flags = PTE_FLAGS(*pte);
     if((mem = kalloc()) == 0)
@@ -448,15 +451,30 @@ uva2ka(pml4e_t *pgdir, char *uva)
 int
 copyout(pml4e_t *pgdir, addr_t va, void *p, uint64 len)
 {
-  char *buf, *pa0;
+  char *buf, *pa0, *mem;
   addr_t n, va0;
 
   buf = (char*)p;
   while(len > 0){
     va0 = PGROUNDDOWN(va);
     pa0 = uva2ka(pgdir, (char*)va0);
-    if(pa0 == 0)
-      return -1;
+    if(pa0 == 0){
+        pte_t *pte = walkpgdir(pgdir, (char*)va0, 0);
+        if(pte && (*pte & PTE_P)){
+            return -1;
+        }
+        mem = kalloc();
+        if(mem == 0)
+            return -1;
+        memset(mem, 0, PGSIZE);
+        if(mappages(pgdir, (void*)va0, PGSIZE, V2P(mem), PTE_W|PTE_U) < 0){
+            kfree(mem);
+            return -1;
+        }
+        pa0 = uva2ka(pgdir, (char*)va0);
+        if(pa0 == 0)
+            return -1;
+    }
     n = PGSIZE - (va - va0);
     if(n > len)
       n = len;

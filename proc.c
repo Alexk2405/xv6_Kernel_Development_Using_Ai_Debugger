@@ -26,6 +26,35 @@ pinit(void)
   initlock(&ptable.lock, "ptable");
 }
 
+void
+ps(void)
+{
+    acquire(&ptable.lock);
+    static char *states[] = {
+    [UNUSED]    "unused",
+    [EMBRYO]    "embryo",
+    [SLEEPING]  "sleep ",
+    [RUNNABLE]  "runble",
+    [RUNNING]   "run   ",
+    [ZOMBIE]    "zombie"
+    };
+    int i;
+    struct proc *p;
+    char *state;
+    addr_t pc[10];
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->state == UNUSED)
+          continue;
+        if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
+          state = states[p->state];
+        else
+          state = "???";
+        cprintf("%d | %s | %s", p->pid, state, p->name);
+        cprintf("\n");
+    }
+    release(&ptable.lock);
+}
+
 //PAGEBREAK: 32
 // Look in the process table for an UNUSED proc.
 // If found, change state to EMBRYO and initialize

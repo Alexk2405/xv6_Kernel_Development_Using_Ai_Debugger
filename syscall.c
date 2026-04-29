@@ -6,7 +6,6 @@
 #include "proc.h"
 #include "x86.h"
 #include "syscall.h"
-
 // Fetch the int at addr from the current process.
 int
 fetchint(addr_t addr, int *ip)
@@ -82,7 +81,9 @@ argptr(int n, char **pp, int size)
 
   if(argaddr(n, &i) < 0)
     return -1;
-  if(size < 0 || (uint)i >= proc->sz || (uint)i+size > proc->sz)
+  if(size < 0)
+    return -1;
+  if(i >= proc->sz || i+(addr_t)size > proc->sz)
     return -1;
   *pp = (char*)i;
   return 0;
@@ -122,6 +123,10 @@ extern addr_t sys_unlink(void);
 extern addr_t sys_wait(void);
 extern addr_t sys_write(void);
 extern addr_t sys_uptime(void);
+extern addr_t sys_getppid(void);
+extern addr_t sys_ps(void);
+extern addr_t sys_sbrk(void);
+extern addr_t sys_getpid2(void);
 
 // PAGEBREAK!
 static addr_t (*syscalls[])(void) = {
@@ -146,6 +151,9 @@ static addr_t (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_getppid] sys_getppid,
+[SYS_ps]      sys_ps,
+[SYS_getpid2]  sys_getpid2,
 };
 
 void
