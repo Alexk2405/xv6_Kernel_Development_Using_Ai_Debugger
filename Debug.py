@@ -120,7 +120,7 @@ Please identify the bug, explain what caused it, and suggest a specific fix."""
     url = "https://api.anthropic.com/v1/messages"
     payload = {
         "model": "claude-sonnet-4-6",
-        "max_tokens": 2048,
+        "max_tokens": 5000,
         "system": SYSTEM_PROMPT,
         "messages": [{"role": "user", "content": full_prompt}]
     }
