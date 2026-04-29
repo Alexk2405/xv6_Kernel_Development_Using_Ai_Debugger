@@ -1,49 +1,70 @@
-xv6 is a re-implementation of Dennis Ritchie's and Ken Thompson's Unix
-Version 6 (v6).  xv6 loosely follows the structure and style of v6,
-but is implemented for a modern x86-based multiprocessor using ANSI C.
+# AI-Assisted xv6 Kernel Development
 
-xv6-64 is a 64-bit port of MIT's xv6, by Anthony Shelton and
-Jakob Eriksson, for use in UIC's Operating Systems curriculum.
+## What This Project Does
 
-ACKNOWLEDGMENTS
+This project expands xv6 functionality with the help of an AI debugger.
+I implemented 3 features using the AI debugger. Those are:
+    - getppid()
+        - Returns parent pid just like how getpid() works
+    - ps()
+        - Prints out every process and their status
+        - Walks through every process, prints pid, state, and name
+    - lazy sbrk
+        - Modifies sbrk to use lazy allocation
+        - Only updates process size but does not allocate memory
+        - Creates a page fault trap handler to allocate memory if availible
+        - Speeds up sbrk because memory is now allocated in the trap handler. This also only gives
+          the memory a process requests at the moment.
 
-xv6 is inspired by John Lions's Commentary on UNIX 6th Edition (Peer
-to Peer Communications; ISBN: 1-57398-013-7; 1st edition (June 14,
-2000)). See also http://pdos.csail.mit.edu/6.828/2016/xv6.html, which
-provides pointers to on-line resources for v6.
+## How to Build and Run
 
-xv6 borrows code from the following sources:
-    JOS (asm.h, elf.h, mmu.h, bootasm.S, ide.c, console.c, and others)
-    Plan 9 (entryother.S, mp.h, mp.c, lapic.c)
-    FreeBSD (ioapic.c)
-    NetBSD (console.c)
+    ! Must add logcmd to your terminal !
+        | If Windows 11:
+        | Run command -> notepad $PROFILE
+        | Then add this function at the bottom of the notepad
+            function logcmd {
+                $logfile = "$HOME\xv6_session.log"
+                $cmd = $args -join " "
+                Add-Content -Path $logfile -Value "$ $cmd"
+                & $args[0] $args[1..($args.Length-1)] 2>&1 | Tee-Object -FilePath $logfile -Append
+            }
+        | Save file then run -> . $PROFILE
+    
+        | If Mac:
+        | Run command -> nano ~/.zshrc
+        | Add functio at bottom
+            logcmd() {
+                local logfile="$HOME/xv6_session.log"
+                echo "$ $*" >> "$logfile"
+                "$@" 2>&1 | tee -a "$logfile"
+            }
+        | Save file then reload with -> source ~/.zshrc
+    
+    1. Run command -> logcmd make qemu-nox
+    2. Do what you want in the qemu simulation
+    3. run command (MAC) -> python3 Debug.py ~/xv6_session.log "any files you would like"
+    3. run command (POWERSHELL) -> python3 Debug.py $HOME/xv6_session.log "any files you would like"
 
-The following people have made contributions: Russ Cox (context switching,
-locking), Cliff Frey (MP), Xiao Yu (MP), Nickolai Zeldovich, Austin
-Clements, Anthony Shelton (x64), Jakob Eriksson (x64), and Xingbo Wu (x64).
+## AI Debugger Tool
 
-The code in the files that constitute xv6 is Copyright 2006-2017
-Frans Kaashoek, Robert Morris, Russ Cox, Anthony Shelton and Jakob Eriksson.
+A lightweight Python script that captures compiler errors and queries the Claude
+API for an explanation. It reads the error output and the relevant source file,
+sends both to Claude, and logs the response alongside the actual fix applied.
+This produces a record of where AI assistance was accurate and where human
+judgment was required.
 
-ERROR REPORTS
+## What I Learned
 
-If you spot errors or have suggestions for improvement, please send email to
-Jakob Eriksson (jakob@uic.edu), or Frans Kaashoek and Robert Morris
-(kaashoek,rtm@csail.mit.edu).  If you have suggestions for improvements,
-please keep in mind that the main purpose of xv6 is as a teaching operating
-system. For example, we are in particular interested in simplifications and
-clarifications, instead of suggestions for new systems calls, more portability,
-etc.
+    - How xv6 dispatches system calls through a numbered table in syscall.c
+    - How the process table is structured and how to safely walk it under a spinlock
+    - How virtual memory works in xv6 — page tables, PTEs, physical vs virtual addresses
+    - How page faults work at the hardware level and how the kernel handles them
+    - The tradeoff between eager and lazy memory allocation and why real operating
+      systems like Linux use lazy allocation
 
-BUILDING AND RUNNING XV6
+## Where AI Helped and Where It Didn't
 
-To build xv6-64 on an x86_64 ELF machine (like Linux or FreeBSD), run "make".
-On non-x86 or non-ELF machines (like OS X, even on x86), you will
-need to install a cross-compiler gcc suite capable of producing x86 ELF
-binaries.  See http://pdos.csail.mit.edu/6.828/2016/tools.html.
-Then run "make TOOLPREFIX=<your-tool-prefix>".
-
-To run xv6, install the QEMU PC simulators.  To run in QEMU, run "make qemu".
-
-To create a typeset version of the code, run "make xv6.pdf".  This
-requires the "mpage" utility.  See http://www.mesa.nl/pub/mpage/.
+AI was useful for explaining compiler errors and identifying which kernel subsystem
+a bug was coming from. It was less useful for understanding the exact sequence of
+changes needed. It was also not very helpful when trying to identify why a triple 
+fault was occurring as there is no error output.
