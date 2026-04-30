@@ -48,8 +48,8 @@ sys_getppid(void)
 
 int sys_getpid2(void)
 {
-    //struct proc *p = 0;
-    return proc->pid;
+    struct proc *p = 0;
+    return p->pid;
 }
 
 int
